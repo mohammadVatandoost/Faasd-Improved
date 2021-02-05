@@ -18,35 +18,35 @@ var installCmd = &cobra.Command{
 	RunE:  runInstall,
 }
 
-const workingDirectoryPermission = 0644
+const WorkingDirectoryPermission = 0644
 
-const faasdwd = "/var/lib/faasd"
+const Faasdwd = "/var/lib/faasd"
 
-const faasdProviderWd = "/var/lib/faasd-provider"
+const FaasdProviderWd = "/var/lib/faasd-provider"
 
 func runInstall(_ *cobra.Command, _ []string) error {
 
-	if err := ensureWorkingDir(path.Join(faasdwd, "secrets")); err != nil {
+	if err := ensureWorkingDir(path.Join(Faasdwd, "secrets")); err != nil {
 		return err
 	}
 
-	if err := ensureWorkingDir(faasdProviderWd); err != nil {
+	if err := ensureWorkingDir(FaasdProviderWd); err != nil {
 		return err
 	}
 
-	if basicAuthErr := makeBasicAuthFiles(path.Join(faasdwd, "secrets")); basicAuthErr != nil {
+	if basicAuthErr := makeBasicAuthFiles(path.Join(Faasdwd, "secrets")); basicAuthErr != nil {
 		return errors.Wrap(basicAuthErr, "cannot create basic-auth-* files")
 	}
 
-	if err := cp("docker-compose.yaml", faasdwd); err != nil {
+	if err := cp("docker-compose.yaml", Faasdwd); err != nil {
 		return err
 	}
 
-	if err := cp("prometheus.yml", faasdwd); err != nil {
+	if err := cp("prometheus.yml", Faasdwd); err != nil {
 		return err
 	}
 
-	if err := cp("resolv.conf", faasdwd); err != nil {
+	if err := cp("resolv.conf", Faasdwd); err != nil {
 		return err
 	}
 
@@ -56,14 +56,14 @@ func runInstall(_ *cobra.Command, _ []string) error {
 	}
 
 	err = systemd.InstallUnit("faasd-provider", map[string]string{
-		"Cwd":             faasdProviderWd,
-		"SecretMountPath": path.Join(faasdwd, "secrets")})
+		"Cwd":             FaasdProviderWd,
+		"SecretMountPath": path.Join(Faasdwd, "secrets")})
 
 	if err != nil {
 		return err
 	}
 
-	err = systemd.InstallUnit("faasd", map[string]string{"Cwd": faasdwd})
+	err = systemd.InstallUnit("faasd", map[string]string{"Cwd": Faasdwd})
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func binExists(folder, name string) error {
 
 func ensureWorkingDir(folder string) error {
 	if _, err := os.Stat(folder); err != nil {
-		err = os.MkdirAll(folder, workingDirectoryPermission)
+		err = os.MkdirAll(folder, WorkingDirectoryPermission)
 		if err != nil {
 			return err
 		}

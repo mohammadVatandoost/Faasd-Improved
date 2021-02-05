@@ -19,7 +19,7 @@ func NewInvokeResolver(client *containerd.Client) *InvokeResolver {
 }
 
 func (i *InvokeResolver) Resolve(functionName string) (url.URL, error) {
-	log.Printf("Resolve: %q\n", functionName)
+	log.Printf("Function handler Resolve: %q\n", functionName)
 
 	function, err := GetFunction(i.client, functionName)
 	if err != nil {

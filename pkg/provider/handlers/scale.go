@@ -18,6 +18,7 @@ import (
 
 func MakeReplicaUpdateHandler(client *containerd.Client, cni gocni.CNI) func(w http.ResponseWriter, r *http.Request) {
 
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Body == nil {

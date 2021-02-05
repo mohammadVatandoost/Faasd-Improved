@@ -165,7 +165,7 @@ func makeFile(filePath, fileContents string) error {
 		return nil
 	} else if os.IsNotExist(err) {
 		log.Printf("Writing to: %q\n", filePath)
-		return ioutil.WriteFile(filePath, []byte(fileContents), workingDirectoryPermission)
+		return ioutil.WriteFile(filePath, []byte(fileContents), WorkingDirectoryPermission)
 	} else {
 		return err
 	}
@@ -200,6 +200,6 @@ func parseUpFlags(cmd *cobra.Command) (upConfig, error) {
 	}
 
 	parsed.composeFilePath = path
-	parsed.workingDir = faasdwd
+	parsed.workingDir = Faasdwd
 	return parsed, err
 }

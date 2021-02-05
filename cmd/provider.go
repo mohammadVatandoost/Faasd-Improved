@@ -55,14 +55,14 @@ func makeProviderCmd() *cobra.Command {
 		}
 
 		writeHostsErr := ioutil.WriteFile(path.Join(wd, "hosts"),
-			[]byte(`127.0.0.1	localhost`), workingDirectoryPermission)
+			[]byte(`127.0.0.1	localhost`), WorkingDirectoryPermission)
 
 		if writeHostsErr != nil {
 			return fmt.Errorf("cannot write hosts file: %s", writeHostsErr)
 		}
 
 		writeResolvErr := ioutil.WriteFile(path.Join(wd, "resolv.conf"),
-			[]byte(`nameserver 8.8.8.8`), workingDirectoryPermission)
+			[]byte(`nameserver 8.8.8.8`), WorkingDirectoryPermission)
 
 		if writeResolvErr != nil {
 			return fmt.Errorf("cannot write resolv.conf file: %s", writeResolvErr)
@@ -94,7 +94,7 @@ func makeProviderCmd() *cobra.Command {
 			UpdateHandler:        handlers.MakeUpdateHandler(client, cni, userSecretPath, alwaysPull),
 			HealthHandler:        func(w http.ResponseWriter, r *http.Request) {},
 			InfoHandler:          handlers.MakeInfoHandler(Version, GitCommit),
-			ListNamespaceHandler: listNamespaces(),
+			ListNamespaceHandler: ListNamespaces(),
 			SecretHandler:        handlers.MakeSecretHandler(client, userSecretPath),
 			LogHandler:           logs.NewLogHandlerFunc(faasdlogs.New(), config.ReadTimeout),
 		}
@@ -107,7 +107,7 @@ func makeProviderCmd() *cobra.Command {
 	return command
 }
 
-func listNamespaces() func(w http.ResponseWriter, r *http.Request) {
+func ListNamespaces() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		list := []string{""}
 		out, _ := json.Marshal(list)

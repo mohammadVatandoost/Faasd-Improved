@@ -8,3 +8,4 @@ basic-auth-password
 /bin
 /secrets
 .vscode
+main

@@ -56,7 +56,7 @@ func GetFunction(client *containerd.Client, name string) (Function, error) {
 	if err != nil {
 		return Function{}, fmt.Errorf("unable to find function: %s, error %s", name, err)
 	}
-
+    //log.Println("Load function container successfully, name: "+ name)
 	image, err := c.Image(ctx)
 	if err != nil {
 		return fn, err
@@ -95,6 +95,7 @@ func GetFunction(client *containerd.Client, name string) (Function, error) {
 			if err != nil {
 				return Function{}, err
 			}
+			//log.Println("Function container task run successfully, container ip: "+ ip.String())
 			fn.IP = ip.String()
 		}
 	} else {

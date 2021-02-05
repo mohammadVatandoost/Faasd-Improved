@@ -26,7 +26,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"io/ioutil"
 	"time"
+	"bytes"
 
 	"github.com/gorilla/mux"
 	"github.com/openfaas/faas-provider/httputil"
@@ -59,6 +61,7 @@ type BaseURLResolver interface {
 //
 // Note that this will panic if `resolver` is nil.
 func NewHandlerFunc(config types.FaaSConfig, resolver BaseURLResolver) http.HandlerFunc {
+
 	if resolver == nil {
 		panic("NewHandlerFunc: empty proxy handler resolver, cannot be nil")
 	}
@@ -77,7 +80,7 @@ func NewHandlerFunc(config types.FaaSConfig, resolver BaseURLResolver) http.Hand
 			http.MethodDelete,
 			http.MethodGet:
 
-			proxyRequest(w, r, proxyClient, resolver)
+			ProxyRequest(w, r, proxyClient, resolver)
 
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -130,7 +133,7 @@ func NewProxyClient(timeout time.Duration, maxIdleConns int, maxIdleConnsPerHost
 }
 
 // proxyRequest handles the actual resolution of and then request to the function service.
-func proxyRequest(w http.ResponseWriter, originalReq *http.Request, proxyClient *http.Client, resolver BaseURLResolver) {
+func ProxyRequest(w http.ResponseWriter, originalReq *http.Request, proxyClient *http.Client, resolver BaseURLResolver) {
 	ctx := originalReq.Context()
 
 	pathVars := mux.Vars(originalReq)
@@ -148,6 +151,14 @@ func proxyRequest(w http.ResponseWriter, originalReq *http.Request, proxyClient 
 		return
 	}
 
+	bodyBytes, err := ioutil.ReadAll(originalReq.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString := string(bodyBytes)
+	originalReq.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+    log.Printf("Mohammad function name: %s, request body: %s \n",functionName, bodyString)
 	proxyReq, err := buildProxyRequest(originalReq, functionAddr, pathVars["params"])
 	if err != nil {
 		httputil.Errorf(w, http.StatusInternalServerError, "Failed to resolve service: %s.", functionName)
@@ -168,8 +179,14 @@ func proxyRequest(w http.ResponseWriter, originalReq *http.Request, proxyClient 
 		return
 	}
 	defer response.Body.Close()
-
+	bodyBytes, err = ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString = string(bodyBytes)
+	log.Printf("Mohammad function name: %s, result: %s \n",functionName, bodyString)
 	log.Printf("%s took %f seconds\n", functionName, seconds.Seconds())
+	response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	clientHeader := w.Header()
 	copyHeaders(clientHeader, &response.Header)

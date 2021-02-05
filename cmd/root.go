@@ -35,8 +35,8 @@ func Execute(version, gitCommit string) error {
 	// Get Version and GitCommit values from main.go.
 	Version = version
 	GitCommit = gitCommit
-
 	if err := rootCommand.Execute(); err != nil {
+		fmt.Println("Execute err:", err.Error())
 		return err
 	}
 	return nil

@@ -22,7 +22,9 @@ require (
 	github.com/docker/go-events v0.0.0-20170721190031-9461782956ad // indirect
 	github.com/gogo/googleapis v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
+	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/golang-lru v0.5.1
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/morikuni/aec v1.0.0
 	github.com/opencontainers/go-digest v1.0.0-rc1.0.20180430190053-c9281466c8b2 // indirect
@@ -31,6 +33,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.2
 	github.com/openfaas/faas v0.0.0-20201205125747-9bbb25e3c7c4
 	github.com/openfaas/faas-provider v0.15.3
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/sethvargo/go-password v0.1.3
@@ -44,7 +47,7 @@ require (
 	go.opencensus.io v0.22.2 // indirect
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
-	google.golang.org/genproto v0.0.0-20191216205247-b31c10ee225f // indirect
-	google.golang.org/grpc v1.23.0 // indirect
+	google.golang.org/grpc v1.35.0
+	google.golang.org/protobuf v1.25.0
 	k8s.io/apimachinery v0.18.9
 )
