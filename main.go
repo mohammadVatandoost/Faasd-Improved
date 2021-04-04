@@ -50,13 +50,15 @@ const (
 	//address     = "localhost:50051"
 	//defaultName = "world"
 	defaultContentType     = "text/plain"
-	MaxCacheItem = 10
-	MaxClientLoad = 5
+	MaxCacheItem = 2
+	MaxClientLoad = 6
+	UseCache = false
 )
 
 type Agent struct {
 	Id uint
 	Address string
+	Loads uint
 }
 
 var ageantAddresses []Agent
@@ -191,7 +193,7 @@ type BaseURLResolver interface {
 }
 
 func NewHandlerFunc(config types.FaaSConfig, resolver BaseURLResolver) http.HandlerFunc {
-	log.Println("Mohammad NewHandlerFunc")
+	// log.Println("Mohammad NewHandlerFunc")
 	if resolver == nil {
 		panic("NewHandlerFunc: empty proxy handler resolver, cannot be nil")
 	}
@@ -227,26 +229,31 @@ func NewHandlerFunc(config types.FaaSConfig, resolver BaseURLResolver) http.Hand
 
 			r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 			sReqHash := hash( append([]byte(functionName), bodyBytes...))
-            mutex.Lock()
-			response, found := Cache.Get(sReqHash)
-			mutex.Unlock()
-			if found {
-				log.Println("Mohammad founded in cache  functionName: ", functionName)
-				res, err := unserializeReq(response.([]byte), r)
-				if err != nil {
-					log.Println("Mohammad unserialize res: ", err.Error())
-					httputil.Errorf(w, http.StatusInternalServerError, "Can't unserialize res: %s.", functionName)
+
+			//*********** cache  ******************
+			if UseCache {
+				mutex.Lock()
+				response, found := Cache.Get(sReqHash)
+				mutex.Unlock()
+				if found {
+					log.Println("Mohammad founded in cache  functionName: ", functionName)
+					res, err := unserializeReq(response.([]byte), r)
+					if err != nil {
+						log.Println("Mohammad unserialize res: ", err.Error())
+						httputil.Errorf(w, http.StatusInternalServerError, "Can't unserialize res: %s.", functionName)
+						return
+					}
+	
+					clientHeader := w.Header()
+					copyHeaders(clientHeader, &res.Header)
+					w.Header().Set("Content-Type", getContentType(r.Header, res.Header))
+	
+					w.WriteHeader(res.StatusCode)
+					io.Copy(w, res.Body)
 					return
 				}
-
-				clientHeader := w.Header()
-				copyHeaders(clientHeader, &res.Header)
-				w.Header().Set("Content-Type", getContentType(r.Header, res.Header))
-
-				w.WriteHeader(res.StatusCode)
-				io.Copy(w, res.Body)
-				return
 			}
+           
 
 			sReq, err := captureRequestData(r)
 			if err != nil {
@@ -262,9 +269,12 @@ func NewHandlerFunc(config types.FaaSConfig, resolver BaseURLResolver) http.Hand
 			}
 
 			//log.Println("Mohammad add to cache sReqHash:", sReqHash)
-			mutex.Lock()
-			Cache.Add(sReqHash, agentRes.Response)
-			mutex.Unlock()
+			if UseCache {
+				mutex.Lock()
+			    Cache.Add(sReqHash, agentRes.Response)
+			    mutex.Unlock()
+			}
+			
 			res, err := unserializeReq(agentRes.Response, r)
 			if err != nil {
 				log.Println("Mohammad unserialize res: ", err.Error())
@@ -299,22 +309,37 @@ func loadBalancer( RequestURI string, exteraPath string, sReq []byte) (*pb.TaskR
 	mutexAgent.Unlock()
 	if found {
 		agentId = value.(uint32)
-		return sendToAgent(ageantAddresses[agentId].Address, RequestURI, exteraPath , sReq )
+		if ageantAddresses[agentId].Loads < MaxClientLoad {
+			mutexAgent.Lock()
+			ageantAddresses[agentId].Loads++
+			mutexAgent.Unlock()
+			return sendToAgent(ageantAddresses[agentId].Address, RequestURI, exteraPath , sReq, agentId )
+		}
 	}
-	agentId = uint32(rand.Int31n(4))
+	
 	mutexAgent.Lock()
+	for i:=0 ; i< len(ageantAddresses); i++ {
+		agentId = uint32(rand.Int31n(4))
+		if ageantAddresses[agentId].Loads < MaxClientLoad {
+			break
+		}
+	}
 	CacheAgent.Add(RequestURI, agentId)
+	ageantAddresses[agentId].Loads++
 	mutexAgent.Unlock()
-	return sendToAgent(ageantAddresses[agentId].Address, RequestURI, exteraPath , sReq )
+	return sendToAgent(ageantAddresses[agentId].Address, RequestURI, exteraPath , sReq, agentId )
 
 }
 
-func sendToAgent(address string, RequestURI string, exteraPath string, sReq []byte) (*pb.TaskResponse, error)  {
+func sendToAgent(address string, RequestURI string, exteraPath string, sReq []byte, agentId uint32) (*pb.TaskResponse, error)  {
 	log.Printf("sendToAgent address: %v,  RequestURI :%s", address, RequestURI)
 
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		log.Printf("did not connect: %v", err)
+		mutexAgent.Lock()
+	    ageantAddresses[agentId].Loads--
+	    mutexAgent.Unlock()
 		return nil, err
 	}
 	defer conn.Close()
@@ -322,14 +347,20 @@ func sendToAgent(address string, RequestURI string, exteraPath string, sReq []by
 
 	// Contact the server and print out its response.
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	r, err := c.TaskAssign(ctx, &pb.TaskRequest{FunctionName: RequestURI, ExteraPath: exteraPath, SerializeReq: sReq})
 	if err != nil {
 		log.Printf("could not TaskAssign: %v", err)
+		mutexAgent.Lock()
+	    ageantAddresses[agentId].Loads--
+	    mutexAgent.Unlock()
 		return nil, err
 	}
 	log.Printf("Response Message: %s", r.Message)
+	mutexAgent.Lock()
+	ageantAddresses[agentId].Loads--
+    mutexAgent.Unlock()
 	return r, err
 
 }
