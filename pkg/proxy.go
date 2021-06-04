@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"time"
+
+	"golang.org/x/net/netutil"
 )
 
 // NewProxy creates a HTTP proxy to expose a host
@@ -69,6 +71,10 @@ func (p *Proxy) Start() error {
 		log.Printf("Error: %s", err.Error())
 		return err
 	}
+
+	maxConn := 200
+	l = netutil.LimitListener(l, int(maxConn))
+	log.Printf("max connections set to %d\n", maxConn)
 
 	defer l.Close()
 	for {
